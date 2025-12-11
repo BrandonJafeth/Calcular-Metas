@@ -11,11 +11,12 @@ import { cn } from '../../lib/utils';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { FileSpreadsheet, FileText, Plus, Coffee } from 'lucide-react';
+import { FileSpreadsheet, FileText, Plus, Coffee, Settings } from 'lucide-react';
 
 export const MatrixGrid: React.FC = () => {
   const { state, timeSlots, totals, actions } = useMatrixData();
   const [rowToDelete, setRowToDelete] = useState<string | null>(null);
+  const [isTimeConfigOpen, setIsTimeConfigOpen] = useState(false);
   const { showToast } = useToast();
 
   const handleDeleteRequest = (id: string) => {
@@ -208,11 +209,24 @@ export const MatrixGrid: React.FC = () => {
       </div>
 
       <div className="mb-6 shrink-0">
-        <TimeConfig 
-          start={state.timeRange.start} 
-          end={state.timeRange.end} 
-          onUpdate={actions.updateTimeRange}
-        />
+        <div className="md:hidden mb-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setIsTimeConfigOpen(!isTimeConfigOpen)}
+            className="w-full gap-2"
+          >
+            <Settings className="h-4 w-4" />
+            {isTimeConfigOpen ? 'Ocultar Configuración' : 'Configurar Horario'}
+          </Button>
+        </div>
+        <div className={cn("md:block", isTimeConfigOpen ? "block" : "hidden")}>
+          <TimeConfig 
+            start={state.timeRange.start} 
+            end={state.timeRange.end} 
+            onUpdate={actions.updateTimeRange}
+          />
+        </div>
       </div>
 
       {/* Mobile View (Cards) */}
