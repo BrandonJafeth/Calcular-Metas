@@ -54,7 +54,7 @@ export const MatrixMobileCard: React.FC<MatrixMobileCardProps> = ({
         </Button>
       </div>
 
-      <div className={cn("grid grid-cols-1 gap-3", isManual && "opacity-50 pointer-events-none")}>
+      <div className="grid grid-cols-1 gap-3">
         {timeSlots.map(slot => {
           const isBreak = row.breaks.includes(slot.id);
           return (
@@ -94,7 +94,7 @@ export const MatrixMobileCard: React.FC<MatrixMobileCardProps> = ({
                       className="h-9 text-right"
                     />
                   </div>
-                  <div>
+                  <div className={cn(isManual && "opacity-50 pointer-events-none")}>
                     <label className="text-[10px] text-muted-foreground block mb-1">Venta</label>
                     <Input
                       type="text"
