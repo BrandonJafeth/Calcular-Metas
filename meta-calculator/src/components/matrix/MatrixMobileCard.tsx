@@ -2,16 +2,19 @@ import React from 'react';
 import type { MatrixRow, TimeSlot } from '../../types';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { formatCurrency } from '../../utils/currency';
+import { formatCurrency, parseCurrency } from '../../utils/currency';
 import { cn } from '../../lib/utils';
-import { Coffee, Trash2 } from 'lucide-react';
+import { Coffee, Trash2, Calculator, RotateCcw } from 'lucide-react';
 
 interface MatrixMobileCardProps {
   row: MatrixRow;
   timeSlots: TimeSlot[];
-  total: number;
+  totalGoal: number;
+  totalSale: number;
   onUpdateName: (name: string) => void;
   onUpdateValue: (slotId: string, value: number) => void;
+  onUpdateSale: (slotId: string, value: number) => void;
+  onUpdateManualTotalSale: (value: number | undefined) => void;
   onToggleBreak: (slotId: string) => void;
   onDelete: () => void;
 }
@@ -19,12 +22,19 @@ interface MatrixMobileCardProps {
 export const MatrixMobileCard: React.FC<MatrixMobileCardProps> = ({
   row,
   timeSlots,
-  total,
+  totalGoal,
+  totalSale,
   onUpdateName,
   onUpdateValue,
+  onUpdateSale,
+  onUpdateManualTotalSale,
   onToggleBreak,
   onDelete
 }) => {
+  const remaining = totalGoal - totalSale;
+  const isMet = remaining <= 0;
+  const isManual = row.manualTotalSale !== undefined;
+
   return (
     <div className="bg-card rounded-lg border shadow-sm p-4 space-y-4">
       <div className="flex gap-2 items-center">
@@ -44,50 +54,114 @@ export const MatrixMobileCard: React.FC<MatrixMobileCardProps> = ({
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className={cn("grid grid-cols-1 gap-3", isManual && "opacity-50 pointer-events-none")}>
         {timeSlots.map(slot => {
           const isBreak = row.breaks.includes(slot.id);
           return (
-            <div key={slot.id} className="space-y-1">
-              <div className="flex justify-between items-center">
-                <label className="text-xs font-medium text-muted-foreground">{slot.label}</label>
-                <button 
+            <div key={slot.id} className={cn(
+              "rounded-md border p-3 relative",
+              isBreak ? "bg-muted/50 border-dashed" : "bg-background"
+            )}>
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-medium text-sm text-muted-foreground">{slot.label}</span>
+                <Button
+                  variant={isBreak ? "default" : "ghost"}
+                  size="sm"
+                  className="h-6 w-6 p-0"
                   onClick={() => onToggleBreak(slot.id)}
-                  className={cn(
-                    "text-[10px] px-1.5 py-0.5 rounded-full border transition-colors",
-                    isBreak 
-                      ? "bg-destructive/10 text-destructive border-destructive/20" 
-                      : "bg-secondary text-muted-foreground border-transparent hover:bg-secondary/80"
-                  )}
                 >
-                  {isBreak ? 'Pausa' : 'Trabajo'}
-                </button>
+                  <Coffee className="h-3 w-3" />
+                </Button>
               </div>
               
               {isBreak ? (
-                <div 
-                  className="h-10 rounded-md bg-muted/50 border border-dashed border-muted-foreground/20 flex items-center justify-center cursor-pointer hover:bg-muted"
-                  onClick={() => onToggleBreak(slot.id)}
-                >
-                  <Coffee className="h-4 w-4 text-muted-foreground" />
+                <div className="text-center py-2 text-muted-foreground font-medium">
+                  PAUSA
                 </div>
               ) : (
-                <Input
-                  type="number"
-                  value={row.values[slot.id] || ''}
-                  onChange={(e) => onUpdateValue(slot.id, Number(e.target.value))}
-                  placeholder="0"
-                  className="text-right"
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground block mb-1">Meta</label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={row.values[slot.id] ? formatCurrency(row.values[slot.id]) : ''}
+                      onChange={(e) => {
+                        const val = parseCurrency(e.target.value);
+                        onUpdateValue(slot.id, val);
+                      }}
+                      placeholder="$0"
+                      className="h-9 text-right"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground block mb-1">Venta</label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={row.sales[slot.id] ? formatCurrency(row.sales[slot.id]) : ''}
+                      onChange={(e) => {
+                        const val = parseCurrency(e.target.value);
+                        onUpdateSale(slot.id, val);
+                      }}
+                      placeholder="$0"
+                      className="h-9 text-right border-green-200 focus-visible:ring-green-500"
+                    />
+                  </div>
+                </div>
               )}
             </div>
           );
         })}
       </div>
 
-      <div className="pt-4 border-t flex justify-between items-center">
-        <span className="font-semibold text-muted-foreground">Total</span>
-        <span className="font-bold text-xl text-primary">{formatCurrency(total)}</span>
+      <div className="bg-muted/30 rounded-lg p-3 space-y-2 border">
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-muted-foreground">Total Meta:</span>
+          <span className="font-bold">{formatCurrency(totalGoal)}</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-muted-foreground">Total Venta:</span>
+          <div className="flex items-center gap-2">
+            {isManual ? (
+              <>
+                <Input 
+                   type="number" 
+                   className="h-8 w-24 text-right px-2 py-1 text-sm"
+                   value={row.manualTotalSale || 0}
+                   onChange={(e) => onUpdateManualTotalSale(Number(e.target.value))}
+                 />
+                 <Button
+                   variant="ghost"
+                   size="icon"
+                   className="h-8 w-8"
+                   onClick={() => onUpdateManualTotalSale(undefined)}
+                 >
+                   <RotateCcw className="h-4 w-4" />
+                 </Button>
+              </>
+            ) : (
+              <>
+                <span className="font-bold text-green-600">{formatCurrency(totalSale)}</span>
+                <Button
+                   variant="ghost"
+                   size="icon"
+                   className="h-8 w-8"
+                   onClick={() => onUpdateManualTotalSale(totalSale)}
+                 >
+                   <Calculator className="h-4 w-4" />
+                 </Button>
+              </>
+            )}
+          </div>
+        </div>
+        <div className={cn(
+          "flex justify-between items-center pt-2 border-t font-bold text-lg",
+          isMet ? "text-green-600" : "text-red-500"
+        )}>
+          <span>{isMet ? "Superávit:" : "Falta:"}</span>
+          <span>{formatCurrency(Math.abs(remaining))}</span>
+        </div>
       </div>
     </div>
   );

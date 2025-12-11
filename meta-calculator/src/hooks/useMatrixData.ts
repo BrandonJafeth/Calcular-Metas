@@ -10,6 +10,7 @@ const INITIAL_STATE: MatrixState = {
     id: crypto.randomUUID(),
     name: '',
     values: {},
+    sales: {},
     breaks: [],
   })),
 };
@@ -19,11 +20,12 @@ export const useMatrixData = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Migration: Ensure rows have breaks array if loading old data
+      // Migration: Ensure rows have breaks array and sales object if loading old data
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       parsed.rows = parsed.rows.map((r: any) => ({
         ...r,
-        breaks: r.breaks || []
+        breaks: r.breaks || [],
+        sales: r.sales || {}
       }));
       return parsed;
     }
@@ -42,7 +44,7 @@ export const useMatrixData = () => {
   const addRow = () => {
     setState(prev => ({
       ...prev,
-      rows: [...prev.rows, { id: crypto.randomUUID(), name: '', values: {}, breaks: [] }]
+      rows: [...prev.rows, { id: crypto.randomUUID(), name: '', values: {}, sales: {}, breaks: [] }]
     }));
   };
 
@@ -66,6 +68,28 @@ export const useMatrixData = () => {
       rows: prev.rows.map(row => 
         row.id === rowId 
           ? { ...row, values: { ...row.values, [slotId]: value } }
+          : row
+      )
+    }));
+  };
+
+  const updateSale = (rowId: string, slotId: string, value: number) => {
+    setState(prev => ({
+      ...prev,
+      rows: prev.rows.map(row => 
+        row.id === rowId 
+          ? { ...row, sales: { ...row.sales, [slotId]: value } }
+          : row
+      )
+    }));
+  };
+
+  const updateManualTotalSale = (rowId: string, value: number | undefined) => {
+    setState(prev => ({
+      ...prev,
+      rows: prev.rows.map(row => 
+        row.id === rowId 
+          ? { ...row, manualTotalSale: value }
           : row
       )
     }));
@@ -122,29 +146,50 @@ export const useMatrixData = () => {
   // Calculations
   const totals = useMemo(() => {
     const rowTotals: Record<string, number> = {};
+    const rowSales: Record<string, number> = {};
     const colTotals: Record<string, number> = {};
+    const colSales: Record<string, number> = {};
     let grandTotal = 0;
+    let grandSales = 0;
 
     // Initialize col totals
     timeSlots.forEach(slot => {
       colTotals[slot.id] = 0;
+      colSales[slot.id] = 0;
     });
 
     state.rows.forEach(row => {
       let rTotal = 0;
+      let rSales = 0;
       timeSlots.forEach(slot => {
         const isBreak = row.breaks.includes(slot.id);
         if (!isBreak) {
           const val = row.values[slot.id] || 0;
+          const sale = row.sales[slot.id] || 0;
           rTotal += val;
+          rSales += sale;
           colTotals[slot.id] = (colTotals[slot.id] || 0) + val;
+          colSales[slot.id] = (colSales[slot.id] || 0) + sale;
         }
       });
       rowTotals[row.id] = rTotal;
+      
+      // Use manual total if defined, otherwise calculated sum
+      const finalRowSale = row.manualTotalSale !== undefined ? row.manualTotalSale : rSales;
+      rowSales[row.id] = finalRowSale;
+      
       grandTotal += rTotal;
+      grandSales += finalRowSale;
     });
 
-    return { rowTotals, colTotals, grandTotal };
+    return { 
+      rowTotals, 
+      rowSales,
+      colTotals, 
+      colSales,
+      grandTotal,
+      grandSales
+    };
   }, [state.rows, timeSlots]);
 
   return {
@@ -156,6 +201,8 @@ export const useMatrixData = () => {
       deleteRow,
       updateRowName,
       updateValue,
+      updateSale,
+      updateManualTotalSale,
       updateTimeRange,
       toggleBreakForColumn,
       toggleCellBreak

@@ -31,21 +31,29 @@ export const MatrixGrid: React.FC = () => {
   };
 
   const handleExportExcel = () => {
-    const headers = ['Nombre', ...timeSlots.map(s => s.label), 'Total'];
-    const data = state.rows.map(row => [
-      row.name,
-      ...timeSlots.map(s => {
-        const isBreak = row.breaks.includes(s.id);
-        return isBreak ? 'PAUSA' : (row.values[s.id] || 0);
-      }),
-      totals.rowTotals[row.id]
-    ]);
+    const headers = ['Nombre', ...timeSlots.map(s => s.label), 'Total Meta', 'Total Venta', 'Diferencia'];
+    const data = state.rows.map(row => {
+      const rGoal = totals.rowTotals[row.id] || 0;
+      const rSale = totals.rowSales[row.id] || 0;
+      return [
+        row.name,
+        ...timeSlots.map(s => {
+          const isBreak = row.breaks.includes(s.id);
+          return isBreak ? 'PAUSA' : (row.values[s.id] || 0);
+        }),
+        rGoal,
+        rSale,
+        rGoal - rSale
+      ];
+    });
     
     // Add totals row
     const totalsRow = [
       'TOTALES',
       ...timeSlots.map(s => totals.colTotals[s.id]),
-      totals.grandTotal
+      totals.grandTotal,
+      totals.grandSales,
+      totals.grandTotal - totals.grandSales
     ];
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data, totalsRow]);
@@ -61,20 +69,28 @@ export const MatrixGrid: React.FC = () => {
       return val.toLocaleString('es-CR', { minimumFractionDigits: 0 }) + ' CRC';
     };
 
-    const head = [['Nombre', ...timeSlots.map(s => s.label), 'Total']];
+    const head = [['Nombre', ...timeSlots.map(s => s.label), 'Total Meta', 'Total Venta', 'Diferencia']];
     const body = [
-      ...state.rows.map(row => [
-        row.name,
-        ...timeSlots.map(s => {
-          const isBreak = row.breaks.includes(s.id);
-          return isBreak ? 'PAUSA' : formatForPDF(row.values[s.id] || 0);
-        }),
-        formatForPDF(totals.rowTotals[row.id])
-      ]),
+      ...state.rows.map(row => {
+        const rGoal = totals.rowTotals[row.id] || 0;
+        const rSale = totals.rowSales[row.id] || 0;
+        return [
+          row.name,
+          ...timeSlots.map(s => {
+            const isBreak = row.breaks.includes(s.id);
+            return isBreak ? 'PAUSA' : formatForPDF(row.values[s.id] || 0);
+          }),
+          formatForPDF(rGoal),
+          formatForPDF(rSale),
+          formatForPDF(rGoal - rSale)
+        ];
+      }),
       [
         'TOTALES',
         ...timeSlots.map(s => formatForPDF(totals.colTotals[s.id])),
-        formatForPDF(totals.grandTotal)
+        formatForPDF(totals.grandTotal),
+        formatForPDF(totals.grandSales),
+        formatForPDF(totals.grandTotal - totals.grandSales)
       ]
     ];
 
@@ -123,9 +139,12 @@ export const MatrixGrid: React.FC = () => {
             key={row.id}
             row={row}
             timeSlots={timeSlots}
-            total={totals.rowTotals[row.id] || 0}
+            totalGoal={totals.rowTotals[row.id] || 0}
+            totalSale={totals.rowSales[row.id] || 0}
             onUpdateName={(name) => actions.updateRowName(row.id, name)}
             onUpdateValue={(slotId, val) => actions.updateValue(row.id, slotId, val)}
+            onUpdateSale={(slotId, val) => actions.updateSale(row.id, slotId, val)}
+            onUpdateManualTotalSale={(val) => actions.updateManualTotalSale(row.id, val)}
             onToggleBreak={(slotId) => actions.toggleCellBreak(row.id, slotId)}
             onDelete={() => handleDeleteRequest(row.id)}
           />
@@ -136,10 +155,21 @@ export const MatrixGrid: React.FC = () => {
         </Button>
         
         {/* Mobile Totals Summary */}
-        <div className="fixed bottom-0 left-0 right-0 bg-card border-t p-4 shadow-lg z-50">
-          <div className="flex justify-between items-center">
-            <span className="font-bold text-muted-foreground">GRAN TOTAL</span>
-            <span className="font-bold text-xl text-primary">{formatCurrency(totals.grandTotal)}</span>
+        <div className="fixed bottom-0 left-0 right-0 bg-card border-t p-4 shadow-lg z-50 space-y-1">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Total Metas:</span>
+            <span className="font-bold">{formatCurrency(totals.grandTotal)}</span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Total Ventas:</span>
+            <span className="font-bold text-green-600">{formatCurrency(totals.grandSales)}</span>
+          </div>
+          <div className={cn(
+            "flex justify-between items-center font-bold text-lg",
+            (totals.grandTotal - totals.grandSales) <= 0 ? "text-green-600" : "text-red-500"
+          )}>
+            <span>{(totals.grandTotal - totals.grandSales) <= 0 ? "Superávit:" : "Falta:"}</span>
+            <span>{formatCurrency(Math.abs(totals.grandTotal - totals.grandSales))}</span>
           </div>
         </div>
       </div>
@@ -179,9 +209,12 @@ export const MatrixGrid: React.FC = () => {
                   key={row.id}
                   row={row}
                   timeSlots={timeSlots}
-                  total={totals.rowTotals[row.id] || 0}
+                  totalGoal={totals.rowTotals[row.id] || 0}
+                  totalSale={totals.rowSales[row.id] || 0}
                   onUpdateName={(name) => actions.updateRowName(row.id, name)}
                   onUpdateValue={(slotId, val) => actions.updateValue(row.id, slotId, val)}
+                  onUpdateSale={(slotId, val) => actions.updateSale(row.id, slotId, val)}
+                  onUpdateManualTotalSale={(val) => actions.updateManualTotalSale(row.id, val)}
                   onToggleBreak={(slotId) => actions.toggleCellBreak(row.id, slotId)}
                   onDelete={() => handleDeleteRequest(row.id)}
                 />
@@ -198,19 +231,37 @@ export const MatrixGrid: React.FC = () => {
 
             {/* Totals Footer */}
             <div className="flex gap-4 mt-6 pt-4 border-t border-primary sticky bottom-0 bg-card z-40 pb-4 px-2 shadow-[0_-5px_10px_-5px_rgba(0,0,0,0.05)]">
-              <div className="w-64 shrink-0 font-bold text-right pr-4 sticky left-0 bg-card z-50 flex items-center justify-end">
-                TOTALES POR HORA
+              <div className="w-64 shrink-0 font-bold text-right pr-4 sticky left-0 bg-card z-50 flex flex-col items-end justify-center gap-1">
+                <span>TOTAL METAS</span>
+                <span className="text-green-600">TOTAL VENTAS</span>
+                <span className="text-xs text-muted-foreground">DIFERENCIA</span>
               </div>
-              {timeSlots.map(slot => (
-                <div key={slot.id} className={cn(
-                  "w-32 shrink-0 text-right font-bold flex items-center justify-end text-foreground"
-                )}>
-                  {formatCurrency(totals.colTotals[slot.id] || 0)}
-                </div>
-              ))}
-              <div className="w-40 shrink-0 text-right sticky right-0 z-50 pl-4 bg-card">
-                 <div className="bg-primary text-primary-foreground font-bold rounded-md px-4 py-2 shadow-md inline-block w-full">
-                    {formatCurrency(totals.grandTotal)}
+              {timeSlots.map(slot => {
+                const goal = totals.colTotals[slot.id] || 0;
+                const sale = totals.colSales[slot.id] || 0;
+                const diff = goal - sale;
+                return (
+                  <div key={slot.id} className="w-32 shrink-0 text-right font-bold flex flex-col items-end justify-center gap-1">
+                    <span>{formatCurrency(goal)}</span>
+                    <span className="text-green-600">{formatCurrency(sale)}</span>
+                    <span className={cn("text-xs", diff <= 0 ? "text-green-600" : "text-red-500")}>
+                      {diff <= 0 ? "+" : "-"}{formatCurrency(Math.abs(diff))}
+                    </span>
+                  </div>
+                );
+              })}
+              <div className="w-40 shrink-0 text-right sticky right-0 z-50 pl-4 bg-card flex flex-col gap-2 justify-center">
+                 <div className="bg-primary text-primary-foreground font-bold rounded-md px-2 py-1 shadow-md text-xs flex justify-between items-center">
+                    <span>M:</span> <span>{formatCurrency(totals.grandTotal)}</span>
+                 </div>
+                 <div className="bg-green-600 text-white font-bold rounded-md px-2 py-1 shadow-md text-xs flex justify-between items-center">
+                    <span>V:</span> <span>{formatCurrency(totals.grandSales)}</span>
+                 </div>
+                 <div className={cn(
+                   "font-bold rounded-md px-2 py-1 shadow-md text-xs flex justify-between items-center",
+                   (totals.grandTotal - totals.grandSales) <= 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                 )}>
+                    <span>D:</span> <span>{formatCurrency(Math.abs(totals.grandTotal - totals.grandSales))}</span>
                  </div>
               </div>
             </div>
