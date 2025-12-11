@@ -31,32 +31,70 @@ export const MatrixGrid: React.FC = () => {
   };
 
   const handleExportExcel = () => {
-    const headers = ['Nombre', ...timeSlots.map(s => s.label), 'Total Meta', 'Total Venta', 'Diferencia'];
-    const data = state.rows.map(row => {
+    const headers = ['Nombre', 'Tipo', ...timeSlots.map(s => s.label), 'Total'];
+    const data: (string | number)[][] = [];
+
+    state.rows.forEach(row => {
       const rGoal = totals.rowTotals[row.id] || 0;
-      const rSale = totals.rowSales[row.id] || 0;
-      return [
+      const rSale = totals.rowSales[row.id] || 0; // This already accounts for manualTotalSale if set in useMatrixData
+
+      // Row for Goals
+      data.push([
         row.name,
+        'Meta',
         ...timeSlots.map(s => {
           const isBreak = row.breaks.includes(s.id);
           return isBreak ? 'PAUSA' : (row.values[s.id] || 0);
         }),
-        rGoal,
-        rSale,
+        rGoal
+      ]);
+
+      // Row for Sales
+      data.push([
+        row.name, // Repeat name for better filtering
+        'Venta',
+        ...timeSlots.map(s => {
+          const isBreak = row.breaks.includes(s.id);
+          return isBreak ? 'PAUSA' : (row.sales[s.id] || 0);
+        }),
+        rSale
+      ]);
+
+      // Row for Difference
+      data.push([
+        row.name,
+        'Diferencia',
+        ...timeSlots.map(s => {
+          const isBreak = row.breaks.includes(s.id);
+          return isBreak ? 'PAUSA' : (row.values[s.id] || 0) - (row.sales[s.id] || 0);
+        }),
         rGoal - rSale
-      ];
+      ]);
     });
     
-    // Add totals row
-    const totalsRow = [
+    // Totals Rows
+    const totalGoalsRow = [
       'TOTALES',
+      'Meta',
       ...timeSlots.map(s => totals.colTotals[s.id]),
-      totals.grandTotal,
-      totals.grandSales,
+      totals.grandTotal
+    ];
+
+    const totalSalesRow = [
+      'TOTALES',
+      'Venta',
+      ...timeSlots.map(s => totals.colSales[s.id]),
+      totals.grandSales
+    ];
+
+    const diffRow = [
+      'DIFERENCIA',
+      '',
+      ...timeSlots.map(s => totals.colTotals[s.id] - totals.colSales[s.id]),
       totals.grandTotal - totals.grandSales
     ];
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...data, totalsRow]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data, [], totalGoalsRow, totalSalesRow, diffRow]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Metas");
     XLSX.writeFile(wb, "metas-diarias.xlsx");
@@ -69,30 +107,69 @@ export const MatrixGrid: React.FC = () => {
       return val.toLocaleString('es-CR', { minimumFractionDigits: 0 }) + ' CRC';
     };
 
-    const head = [['Nombre', ...timeSlots.map(s => s.label), 'Total Meta', 'Total Venta', 'Diferencia']];
-    const body = [
-      ...state.rows.map(row => {
-        const rGoal = totals.rowTotals[row.id] || 0;
-        const rSale = totals.rowSales[row.id] || 0;
-        return [
-          row.name,
-          ...timeSlots.map(s => {
-            const isBreak = row.breaks.includes(s.id);
-            return isBreak ? 'PAUSA' : formatForPDF(row.values[s.id] || 0);
-          }),
-          formatForPDF(rGoal),
-          formatForPDF(rSale),
-          formatForPDF(rGoal - rSale)
-        ];
-      }),
+    const head = [['Nombre', 'Tipo', ...timeSlots.map(s => s.label), 'Total']];
+    const body: (string | number)[][] = [];
+
+    state.rows.forEach(row => {
+      const rGoal = totals.rowTotals[row.id] || 0;
+      const rSale = totals.rowSales[row.id] || 0;
+
+      // Goal Row
+      body.push([
+        row.name,
+        'Meta',
+        ...timeSlots.map(s => {
+          const isBreak = row.breaks.includes(s.id);
+          return isBreak ? 'PAUSA' : formatForPDF(row.values[s.id] || 0);
+        }),
+        formatForPDF(rGoal)
+      ]);
+
+      // Sale Row
+      body.push([
+        '', // Empty name for second row to look cleaner in PDF
+        'Venta',
+        ...timeSlots.map(s => {
+          const isBreak = row.breaks.includes(s.id);
+          return isBreak ? 'PAUSA' : formatForPDF(row.sales[s.id] || 0);
+        }),
+        formatForPDF(rSale)
+      ]);
+
+      // Difference Row
+      body.push([
+        '', 
+        'Diferencia',
+        ...timeSlots.map(s => {
+          const isBreak = row.breaks.includes(s.id);
+          return isBreak ? 'PAUSA' : formatForPDF((row.values[s.id] || 0) - (row.sales[s.id] || 0));
+        }),
+        formatForPDF(rGoal - rSale)
+      ]);
+    });
+
+    // Add Totals
+    body.push(
+      ['', '', ...timeSlots.map(() => ''), ''], // Spacer
       [
         'TOTALES',
+        'Meta',
         ...timeSlots.map(s => formatForPDF(totals.colTotals[s.id])),
-        formatForPDF(totals.grandTotal),
-        formatForPDF(totals.grandSales),
+        formatForPDF(totals.grandTotal)
+      ],
+      [
+        'TOTALES',
+        'Venta',
+        ...timeSlots.map(s => formatForPDF(totals.colSales[s.id])),
+        formatForPDF(totals.grandSales)
+      ],
+      [
+        'DIFERENCIA',
+        '',
+        ...timeSlots.map(s => formatForPDF(totals.colTotals[s.id] - totals.colSales[s.id])),
         formatForPDF(totals.grandTotal - totals.grandSales)
       ]
-    ];
+    );
 
     autoTable(doc, {
       head,
@@ -100,6 +177,12 @@ export const MatrixGrid: React.FC = () => {
       theme: 'grid',
       styles: { fontSize: 8 },
       headStyles: { fillColor: [25, 118, 210] }, // Primary color
+      // Highlight totals rows
+      didParseCell: (data) => {
+        if (data.row.index >= body.length - 3) {
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
     });
 
     doc.save('metas-diarias.pdf');
