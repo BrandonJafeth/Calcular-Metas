@@ -98,7 +98,9 @@ export const MatrixGrid: React.FC = () => {
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data, [], totalGoalsRow, totalSalesRow, diffRow]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Metas");
-    XLSX.writeFile(wb, "metas-diarias.xlsx");
+    
+    const dateStr = new Date().toLocaleDateString('es-CR').replace(/\//g, '-');
+    XLSX.writeFile(wb, `metas-diarias-${dateStr}.xlsx`);
   };
 
   const handleExportPDF = () => {
@@ -186,7 +188,8 @@ export const MatrixGrid: React.FC = () => {
       }
     });
 
-    doc.save('metas-diarias.pdf');
+    const dateStr = new Date().toLocaleDateString('es-CR').replace(/\//g, '-');
+    doc.save(`metas-diarias-${dateStr}.pdf`);
   };
 
   return (
