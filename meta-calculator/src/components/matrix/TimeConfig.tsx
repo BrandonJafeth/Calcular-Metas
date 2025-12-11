@@ -22,7 +22,7 @@ export const TimeConfig: React.FC<TimeConfigProps> = ({ start, end, onUpdate }) 
     <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-card rounded-lg border shadow-sm">
       <h3 className="font-semibold text-lg tracking-tight">Configuración Horaria</h3>
       
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex items-center gap-2">
           <label htmlFor="start-time" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
             Inicio
