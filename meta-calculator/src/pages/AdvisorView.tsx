@@ -112,27 +112,30 @@ export const AdvisorView: React.FC = () => {
       <div className="w-full max-w-md space-y-6">
         
         {/* Header Card */}
-        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 text-center relative">
-          <div className="absolute top-4 right-4 flex gap-1">
+        <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">{getGreeting()}, {advisor.name} 👋</h1>
+          <p className="text-gray-500 text-sm mb-4">
+            {format(new Date(session.date + 'T12:00:00'), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+          </p>
+          
+          <div className="flex justify-center gap-3">
             <button 
               onClick={() => handleExport('pdf')}
-              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-red-50 hover:text-red-600 transition-colors text-sm font-medium border border-gray-200"
               title="Descargar PDF"
             >
               <FileText className="w-4 h-4" />
+              PDF
             </button>
             <button 
               onClick={() => handleExport('excel')}
-              className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-md transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-green-50 hover:text-green-600 transition-colors text-sm font-medium border border-gray-200"
               title="Descargar Excel"
             >
               <FileSpreadsheet className="w-4 h-4" />
+              Excel
             </button>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">{getGreeting()}, {advisor.name} </h1>
-          <p className="text-gray-500 text-sm">
-            {format(new Date(session.date + 'T12:00:00'), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
-          </p>
         </div>
 
         {/* Goal Progress Card */}
