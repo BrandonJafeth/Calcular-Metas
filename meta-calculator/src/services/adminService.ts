@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { DailySession, HourlyWeight, Advisor, AdvisorAvailability } from '../types';
+import type { DailySession, HourlyWeight, Advisor, AdvisorAvailability, SessionTemplate } from '../types';
 
 export const adminService = {
   async getOrCreateSession(date: string): Promise<DailySession> {
@@ -27,20 +27,46 @@ export const adminService = {
     }
 
     // Try to copy configuration from the most recent previous session
-    const { data: lastSession } = await supabase
+    // Strategy: 
+    // 1. Try to find a session with the SAME day of week (e.g. last Monday)
+    // 2. If not found, fallback to the most recent session (e.g. yesterday)
+    
+    const targetDate = new Date(date);
+    const targetDayOfWeek = targetDate.getDay(); // 0-6
+
+    // Fetch last 30 sessions to find a match in JS (simpler than complex SQL date math)
+    const { data: recentSessions } = await supabase
       .from('daily_sessions')
-      .select('id, start_hour, end_hour')
+      .select('id, date, start_hour, end_hour')
       .lt('date', date)
       .order('date', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(30);
 
-    if (lastSession) {
+    let sourceSession = null;
+
+    if (recentSessions && recentSessions.length > 0) {
+      // 1. Try same day of week
+      sourceSession = recentSessions.find(s => {
+        // Adjust for timezone if necessary, but assuming YYYY-MM-DD strings are consistent
+        // We use getUTCDay() if the date string is UTC, but here we rely on the string parsing
+        // Let's just parse the YYYY-MM-DD parts to be safe
+        const [y, m, day] = s.date.split('-').map(Number);
+        const sessionDate = new Date(y, m - 1, day);
+        return sessionDate.getDay() === targetDayOfWeek;
+      });
+
+      // 2. Fallback to most recent
+      if (!sourceSession) {
+        sourceSession = recentSessions[0];
+      }
+    }
+
+    if (sourceSession) {
       // 1. Copy start/end hours
-      if (lastSession.start_hour !== null && lastSession.end_hour !== null) {
+      if (sourceSession.start_hour !== null && sourceSession.end_hour !== null) {
         await supabase
           .from('daily_sessions')
-          .update({ start_hour: lastSession.start_hour, end_hour: lastSession.end_hour })
+          .update({ start_hour: sourceSession.start_hour, end_hour: sourceSession.end_hour })
           .eq('id', newSession.id);
       }
 
@@ -48,7 +74,7 @@ export const adminService = {
       const { data: lastWeights } = await supabase
         .from('hourly_weights')
         .select('hour_start, percentage')
-        .eq('session_id', lastSession.id);
+        .eq('session_id', sourceSession.id);
 
       if (lastWeights && lastWeights.length > 0) {
         const newWeights = lastWeights.map(w => ({
@@ -158,5 +184,63 @@ export const adminService = {
       .upsert({ advisor_id: advisorId, hour_start: hour, is_active: isActive }, { onConflict: 'advisor_id,hour_start' });
       
     if (error) throw new Error(`Error updating availability: ${error.message}`);
+  },
+
+  // Template Management
+  async getTemplates(): Promise<SessionTemplate[]> {
+    const { data, error } = await supabase
+      .from('session_templates')
+      .select('*')
+      .order('name');
+      
+    if (error) throw new Error(`Error fetching templates: ${error.message}`);
+    return data || [];
+  },
+
+  async createTemplate(name: string, startHour: number, endHour: number, weights: { hour_start: number, percentage: number }[]): Promise<void> {
+    const { error } = await supabase
+      .from('session_templates')
+      .insert({
+        name,
+        start_hour: startHour,
+        end_hour: endHour,
+        weights: weights // Stored as JSONB
+      });
+      
+    if (error) throw new Error(`Error creating template: ${error.message}`);
+  },
+
+  async deleteTemplate(id: string): Promise<void> {
+    const { error } = await supabase.from('session_templates').delete().eq('id', id);
+    if (error) throw new Error(`Error deleting template: ${error.message}`);
+  },
+
+  async applyTemplate(sessionId: string, templateId: string): Promise<void> {
+    // 1. Get Template
+    const { data: template, error: tError } = await supabase
+      .from('session_templates')
+      .select('*')
+      .eq('id', templateId)
+      .single();
+      
+    if (tError || !template) throw new Error(`Error fetching template: ${tError?.message}`);
+
+    // 2. Update Session Hours
+    await this.updateSessionHours(sessionId, template.start_hour, template.end_hour);
+
+    // 3. Clear existing weights
+    await supabase.from('hourly_weights').delete().eq('session_id', sessionId);
+
+    // 4. Insert new weights
+    // Cast the JSONB weights back to the expected array format
+    const weights = (template.weights as unknown as { hour_start: number, percentage: number }[]).map(w => ({
+      session_id: sessionId,
+      hour_start: w.hour_start,
+      percentage: w.percentage
+    }));
+
+    if (weights.length > 0) {
+      await this.upsertHourlyWeights(weights);
+    }
   }
 };

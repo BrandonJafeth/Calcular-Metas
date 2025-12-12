@@ -163,9 +163,18 @@ export const AdvisorView: React.FC = () => {
               <Input 
                 type="number" 
                 value={salesInput}
-                onChange={(e) => setSalesInput(e.target.value)}
+                onChange={(e) => {
+                  if (e.target.value.includes('-')) return;
+                  setSalesInput(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                    e.preventDefault();
+                  }
+                }}
                 className="text-lg font-semibold h-12"
                 placeholder="0.00"
+                min="0"
               />
             </div>
 
@@ -177,9 +186,18 @@ export const AdvisorView: React.FC = () => {
               <Input 
                 type="number" 
                 value={ticketsInput}
-                onChange={(e) => setTicketsInput(e.target.value)}
+                onChange={(e) => {
+                  if (e.target.value.includes('-')) return;
+                  setTicketsInput(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                    e.preventDefault();
+                  }
+                }}
                 className="text-lg font-semibold h-12"
                 placeholder="0"
+                min="0"
               />
             </div>
 

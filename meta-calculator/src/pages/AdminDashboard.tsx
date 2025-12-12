@@ -4,15 +4,16 @@ import { adminService } from '../services/adminService';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { formatCurrency } from '../utils/currency';
-import { Plus, Trash2, Copy, User, Calendar, DollarSign, Clock, X, Eye, FileText, FileSpreadsheet } from 'lucide-react';
+import { Plus, Trash2, Copy, User, Calendar, DollarSign, Clock, X, Eye, FileText, FileSpreadsheet, Save, LayoutTemplate } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { cn } from '../lib/utils';
 import { exportAdminReportPDF, exportAdminReportExcel } from '../utils/exportUtils';
-import type { Advisor, DailySession, HourlyWeight, AdvisorAvailability } from '../types';
+import type { Advisor, DailySession, HourlyWeight, AdvisorAvailability, SessionTemplate } from '../types';
 
 export const AdminDashboard: React.FC = () => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedAdvisor, setSelectedAdvisor] = useState<Advisor | null>(null);
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -43,10 +44,47 @@ export const AdminDashboard: React.FC = () => {
     enabled: !!session?.id
   });
 
+  // 5. Templates Query
+  const { data: templates } = useQuery({
+    queryKey: ['templates'],
+    queryFn: adminService.getTemplates
+  });
+
   // Mutations
   const updateGoalMutation = useMutation({
     mutationFn: (goal: number) => adminService.updateSessionGoal(session!.id, goal),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['session', date] })
+  });
+
+  const createTemplateMutation = useMutation({
+    mutationFn: (name: string) => {
+      if (!session || !weights) throw new Error("No session data");
+      const start = session.start_hour ?? 9;
+      const end = session.end_hour ?? 21;
+      return adminService.createTemplate(name, start, end, weights);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] });
+      showToast('Plantilla guardada', 'success');
+    }
+  });
+
+  const applyTemplateMutation = useMutation({
+    mutationFn: (templateId: string) => adminService.applyTemplate(session!.id, templateId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session', date] });
+      queryClient.invalidateQueries({ queryKey: ['weights', session?.id] });
+      showToast('Plantilla aplicada', 'success');
+      setShowTemplatesModal(false);
+    }
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: (id: string) => adminService.deleteTemplate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['templates'] });
+      showToast('Plantilla eliminada', 'success');
+    }
   });
 
   const updateHoursMutation = useMutation({
@@ -84,7 +122,7 @@ export const AdminDashboard: React.FC = () => {
   const [newAdvisorName, setNewAdvisorName] = useState('');
   const [localWeights, setLocalWeights] = useState<Record<number, number>>({});
   const [localGoal, setLocalGoal] = useState<string>('');
-  const goalDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const goalDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync session goal to local state
   useEffect(() => {
@@ -126,6 +164,7 @@ export const AdminDashboard: React.FC = () => {
   }, [weights]);
 
   const handleWeightChange = (hour: number, val: string) => {
+    if (val.includes('-')) return;
     const num = parseFloat(val) || 0;
     setLocalWeights(prev => ({ ...prev, [hour]: num }));
   };
@@ -301,6 +340,11 @@ export const AdminDashboard: React.FC = () => {
                     type="number" 
                     value={localGoal}
                     onChange={(e) => handleGoalChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                        e.preventDefault();
+                      }
+                    }}
                     className="bg-white/50 border-blue-200 text-xl font-bold text-blue-900 h-10"
                     placeholder="0.00"
                     min="0"
@@ -332,9 +376,20 @@ export const AdminDashboard: React.FC = () => {
               <Clock className="w-5 h-5 text-gray-500" />
               Distribución por Hora (%)
             </h2>
-            <Button size="sm" onClick={saveWeights} disabled={updateWeightsMutation.isPending}>
-              {updateWeightsMutation.isPending ? 'Guardando...' : 'Guardar Pesos'}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setShowTemplatesModal(true)}
+                className="flex items-center gap-2"
+              >
+                <LayoutTemplate className="w-4 h-4" />
+                Plantillas
+              </Button>
+              <Button size="sm" onClick={saveWeights} disabled={updateWeightsMutation.isPending}>
+                {updateWeightsMutation.isPending ? 'Guardando...' : 'Guardar Pesos'}
+              </Button>
+            </div>
           </div>
           
           <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-13 gap-2 overflow-x-auto pb-2">
@@ -347,8 +402,14 @@ export const AdminDashboard: React.FC = () => {
                   type="number"
                   value={localWeights[hour] || ''}
                   onChange={(e) => handleWeightChange(hour, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                      e.preventDefault();
+                    }
+                  }}
                   className="w-full text-center border rounded-md py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="0"
+                  min="0"
                 />
               </div>
             ))}
@@ -453,6 +514,98 @@ export const AdminDashboard: React.FC = () => {
           />
         )}
 
+        {/* Templates Modal */}
+        {showTemplatesModal && (
+          <TemplatesModal
+            templates={templates || []}
+            onClose={() => setShowTemplatesModal(false)}
+            onApply={(id) => applyTemplateMutation.mutate(id)}
+            onSave={(name) => createTemplateMutation.mutate(name)}
+            onDelete={(id) => deleteTemplateMutation.mutate(id)}
+          />
+        )}
+
+      </div>
+    </div>
+  );
+};
+
+const TemplatesModal: React.FC<{
+  templates: SessionTemplate[];
+  onClose: () => void;
+  onApply: (id: string) => void;
+  onSave: (name: string) => void;
+  onDelete: (id: string) => void;
+}> = ({ templates, onClose, onApply, onSave, onDelete }) => {
+  const [newTemplateName, setNewTemplateName] = useState('');
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <LayoutTemplate className="w-5 h-5 text-blue-600" />
+            Gestionar Plantillas
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors" title="Cerrar">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-6">
+          {/* Save New */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Guardar configuración actual como:</label>
+            <div className="flex gap-2">
+              <Input 
+                placeholder="Ej: Lunes Standard, Cierre de Mes..." 
+                value={newTemplateName}
+                onChange={(e) => setNewTemplateName(e.target.value)}
+              />
+              <Button 
+                onClick={() => {
+                  if (newTemplateName.trim()) {
+                    onSave(newTemplateName);
+                    setNewTemplateName('');
+                  }
+                }}
+                disabled={!newTemplateName.trim()}
+              >
+                <Save className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <label className="text-sm font-medium text-gray-700 mb-3 block">Plantillas Guardadas:</label>
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {templates.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">No hay plantillas guardadas</p>
+              ) : (
+                templates.map(t => (
+                  <div key={t.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:border-blue-200 transition-colors group">
+                    <div>
+                      <p className="font-medium text-gray-900">{t.name}</p>
+                      <p className="text-xs text-gray-500">{t.start_hour}:00 - {t.end_hour}:00</p>
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button size="sm" variant="outline" onClick={() => onApply(t.id)} title="Aplicar esta plantilla">
+                        Aplicar
+                      </Button>
+                      <button 
+                        onClick={() => onDelete(t.id)}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
