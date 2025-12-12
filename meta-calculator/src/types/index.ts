@@ -1,24 +1,45 @@
-export interface TimeSlot {
+export interface DailySession {
   id: string;
-  label: string; // "10:00 AM"
-  hour: number; // 10
-  // isBreak removed from here, now managed per row
+  date: string;
+  total_daily_goal: number;
+  start_hour: number;
+  end_hour: number;
 }
 
-export interface MatrixRow {
+export interface HourlyWeight {
+  id: string;
+  session_id: string;
+  hour_start: number;
+  percentage: number;
+}
+
+export interface Advisor {
+  id: string;
+  session_id: string;
+  name: string;
+  access_token: string;
+  total_sales: number;
+  tickets_count: number;
+}
+
+export interface AdvisorAvailability {
+  id: string;
+  advisor_id: string;
+  hour_start: number;
+  is_active: boolean;
+}
+
+export interface SessionTemplate {
   id: string;
   name: string;
-  values: Record<string, number>; // timeSlotId -> amount
-  sales: Record<string, number>; // timeSlotId -> sale amount
-  manualTotalSale?: number; // Optional manual override for total sales
-  breaks: string[]; // IDs of time slots that are breaks for this row
+  start_hour: number;
+  end_hour: number;
+  weights: { hour_start: number; percentage: number }[];
 }
 
-export interface MatrixState {
-  timeRange: {
-    start: number; // 0-23
-    end: number; // 0-23
-  };
-  // breakHours removed from global state
-  rows: MatrixRow[];
+// Legacy types kept for reference if needed, but likely to be replaced
+export interface TimeSlot {
+  id: string;
+  label: string; 
+  hour: number; 
 }

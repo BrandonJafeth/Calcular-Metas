@@ -19,9 +19,9 @@ const icons = {
 };
 
 const variants = {
-  success: "bg-green-50 text-green-900 border-green-200 dark:bg-green-900/20 dark:text-green-100 dark:border-green-900",
-  error: "bg-red-50 text-red-900 border-red-200 dark:bg-red-900/20 dark:text-red-100 dark:border-red-900",
-  info: "bg-blue-50 text-blue-900 border-blue-200 dark:bg-blue-900/20 dark:text-blue-100 dark:border-blue-900",
+  success: "bg-green-100 text-green-800 border-green-300 font-semibold shadow-lg",
+  error: "bg-red-100 text-red-800 border-red-300 font-semibold shadow-lg",
+  info: "bg-blue-100 text-blue-800 border-blue-300 font-semibold shadow-lg",
 };
 
 export const Toast: React.FC<ToastProps> = ({ id, message, type, onClose, duration = 3000 }) => {
