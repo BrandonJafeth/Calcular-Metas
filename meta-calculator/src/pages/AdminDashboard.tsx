@@ -241,19 +241,19 @@ export const AdminDashboard: React.FC = () => {
       <div className="max-w-6xl mx-auto space-y-8">
         
         {/* Header Section */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-gray-100">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Panel de Administración</h1>
               <p className="text-gray-500">Configura la meta diaria y los asesores</p>
             </div>
             
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col sm:flex-row w-full md:w-auto items-stretch sm:items-center gap-3">
               {/* Export Buttons */}
-              <div className="flex items-center bg-gray-50 rounded-lg p-1 border border-gray-200">
+              <div className="flex items-center justify-center bg-gray-50 rounded-lg p-1 border border-gray-200">
                 <button 
                   onClick={() => handleExport('pdf')}
-                  className="p-2 text-gray-600 hover:text-red-600 hover:bg-white rounded-md transition-all"
+                  className="flex-1 sm:flex-none p-2 text-gray-600 hover:text-red-600 hover:bg-white rounded-md transition-all flex justify-center"
                   title="Exportar a PDF"
                 >
                   <FileText className="w-5 h-5" />
@@ -261,7 +261,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className="w-px h-4 bg-gray-300 mx-1"></div>
                 <button 
                   onClick={() => handleExport('excel')}
-                  className="p-2 text-gray-600 hover:text-green-600 hover:bg-white rounded-md transition-all"
+                  className="flex-1 sm:flex-none p-2 text-gray-600 hover:text-green-600 hover:bg-white rounded-md transition-all flex justify-center"
                   title="Exportar a Excel"
                 >
                   <FileSpreadsheet className="w-5 h-5" />
@@ -278,7 +278,7 @@ export const AdminDashboard: React.FC = () => {
                   title="Seleccionar fecha"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm hover:border-blue-300 transition-all cursor-pointer"
+                  className="w-full sm:w-auto pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-700 font-medium focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none shadow-sm hover:border-blue-300 transition-all cursor-pointer"
                 />
               </div>
             </div>
@@ -370,31 +370,36 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Hourly Weights Section */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex justify-between items-center mb-4">
+        <div className="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-gray-100">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Clock className="w-5 h-5 text-gray-500" />
               Distribución por Hora (%)
             </h2>
-            <div className="flex gap-2">
+            <div className="flex w-full sm:w-auto gap-2">
               <Button 
                 size="sm" 
                 variant="outline" 
                 onClick={() => setShowTemplatesModal(true)}
-                className="flex items-center gap-2"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2"
               >
                 <LayoutTemplate className="w-4 h-4" />
                 Plantillas
               </Button>
-              <Button size="sm" onClick={saveWeights} disabled={updateWeightsMutation.isPending}>
+              <Button 
+                size="sm" 
+                onClick={saveWeights} 
+                disabled={updateWeightsMutation.isPending}
+                className="flex-1 sm:flex-none"
+              >
                 {updateWeightsMutation.isPending ? 'Guardando...' : 'Guardar Pesos'}
               </Button>
             </div>
           </div>
           
-          <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-13 gap-2 overflow-x-auto pb-2">
+          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-13 gap-2 pb-2">
             {hours.map(hour => (
-              <div key={hour} className="flex flex-col gap-1 min-w-[60px]">
+              <div key={hour} className="flex flex-col gap-1">
                 <span className="text-xs text-center text-gray-500 font-medium">
                   {hour > 12 ? `${hour - 12} PM` : `${hour} ${hour === 12 ? 'PM' : 'AM'}`}
                 </span>
@@ -407,7 +412,7 @@ export const AdminDashboard: React.FC = () => {
                       e.preventDefault();
                     }
                   }}
-                  className="w-full text-center border rounded-md py-1 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full text-center border rounded-md py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 touch-manipulation"
                   placeholder="0"
                   min="0"
                 />
@@ -422,67 +427,73 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Availability / Schedule Section */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 overflow-x-auto">
+        <div className="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-gray-100 overflow-hidden">
           <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
             <Calendar className="w-5 h-5 text-gray-500" />
             Disponibilidad / Almuerzos
           </h2>
           
-          <table className="w-full min-w-[600px] text-sm">
-            <thead>
-              <tr>
-                <th className="text-left p-2 text-gray-500 font-medium">Hora</th>
-                {advisors?.map(adv => (
-                  <th key={adv.id} className="p-2 text-center text-gray-900 font-medium">{adv.name}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {hours.map(hour => (
-                <tr key={hour} className="border-t border-gray-50 hover:bg-gray-50">
-                  <td className="p-2 text-gray-500 font-medium">
-                    {hour > 12 ? `${hour - 12} PM` : `${hour} ${hour === 12 ? 'PM' : 'AM'}`}
-                  </td>
-                  {advisors?.map(adv => {
-                    const avail = availability?.find(a => a.advisor_id === adv.id && a.hour_start === hour);
-                    const isActive = avail ? avail.is_active : true; // Default active
-                    
-                    return (
-                      <td key={`${adv.id}-${hour}`} className="p-2 text-center">
-                        <button
-                          onClick={() => updateAvailabilityMutation.mutate({ advisorId: adv.id, hour, isActive: !isActive })}
-                          className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center transition-colors",
-                            isActive ? "bg-green-100 text-green-600 hover:bg-green-200" : "bg-red-100 text-red-600 hover:bg-red-200"
-                          )}
-                          title={isActive ? "Activo" : "Inactivo / Almuerzo"}
-                        >
-                          {isActive ? "✓" : "✕"}
-                        </button>
-                      </td>
-                    );
-                  })}
+          <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0 pb-2">
+            <table className="w-full min-w-[600px] text-sm border-separate border-spacing-0">
+              <thead>
+                <tr>
+                  <th className="sticky left-0 bg-white z-10 text-left p-2 text-gray-500 font-medium border-b border-gray-100 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Hora</th>
+                  {advisors?.map(adv => (
+                    <th key={adv.id} className="p-2 text-center text-gray-900 font-medium border-b border-gray-100 min-w-[100px]">{adv.name}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {hours.map(hour => (
+                  <tr key={hour} className="hover:bg-gray-50">
+                    <td className="sticky left-0 bg-white z-10 p-2 text-gray-500 font-medium border-b border-gray-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                      {hour > 12 ? `${hour - 12} PM` : `${hour} ${hour === 12 ? 'PM' : 'AM'}`}
+                    </td>
+                    {advisors?.map(adv => {
+                      const avail = availability?.find(a => a.advisor_id === adv.id && a.hour_start === hour);
+                      const isActive = avail ? avail.is_active : true; // Default active
+                      
+                      return (
+                        <td key={`${adv.id}-${hour}`} className="p-2 text-center border-b border-gray-50">
+                          <button
+                            onClick={() => updateAvailabilityMutation.mutate({ advisorId: adv.id, hour, isActive: !isActive })}
+                            className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center transition-colors mx-auto",
+                              isActive ? "bg-green-100 text-green-600 hover:bg-green-200" : "bg-red-100 text-red-600 hover:bg-red-200"
+                            )}
+                            title={isActive ? "Activo" : "Inactivo / Almuerzo"}
+                          >
+                            {isActive ? "✓" : "✕"}
+                          </button>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Advisors Section */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-gray-100">
           <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
             <User className="w-5 h-5 text-gray-500" />
             Asesores
           </h2>
 
-          <div className="flex gap-2 mb-6">
+          <div className="flex flex-col sm:flex-row gap-2 mb-6">
             <Input 
               placeholder="Nombre del nuevo asesor..." 
               value={newAdvisorName}
               onChange={(e) => setNewAdvisorName(e.target.value)}
-              className="max-w-md"
+              className="w-full sm:max-w-md"
             />
-            <Button onClick={() => addAdvisorMutation.mutate(newAdvisorName)} disabled={!newAdvisorName.trim()}>
+            <Button 
+              onClick={() => addAdvisorMutation.mutate(newAdvisorName)} 
+              disabled={!newAdvisorName.trim()}
+              className="w-full sm:w-auto"
+            >
               <Plus className="w-4 h-4 mr-2" />
               Agregar
             </Button>
@@ -682,18 +693,19 @@ const AdvisorDetailsModal: React.FC<{
         </div>
         
         <div className="p-6 overflow-y-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 text-gray-600 font-medium">
-              <tr>
-                <th className="p-3 rounded-tl-lg">Hora</th>
-                <th className="p-3">Meta Global Hora</th>
-                <th className="p-3">Peso %</th>
-                <th className="p-3 text-center">Asesores Activos</th>
-                <th className="p-3 text-center">Estado</th>
-                <th className="p-3 text-right rounded-tr-lg">Meta Asignada</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+          <div className="overflow-x-auto -mx-6 px-6 pb-2">
+            <table className="w-full text-sm text-left min-w-[600px]">
+              <thead className="bg-gray-50 text-gray-600 font-medium">
+                <tr>
+                  <th className="p-3 rounded-tl-lg whitespace-nowrap">Hora</th>
+                  <th className="p-3 whitespace-nowrap">Meta Global Hora</th>
+                  <th className="p-3 whitespace-nowrap">Peso %</th>
+                  <th className="p-3 text-center whitespace-nowrap">Asesores Activos</th>
+                  <th className="p-3 text-center whitespace-nowrap">Estado</th>
+                  <th className="p-3 text-right rounded-tr-lg whitespace-nowrap">Meta Asignada</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
               {hours.map(hour => {
                 const weight = weights.find(w => w.hour_start === hour);
                 const percentage = weight?.percentage || 0;
@@ -758,6 +770,7 @@ const AdvisorDetailsModal: React.FC<{
               </tr>
             </tfoot>
           </table>
+          </div>
         </div>
       </div>
     </div>
