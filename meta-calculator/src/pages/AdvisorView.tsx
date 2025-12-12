@@ -113,7 +113,7 @@ export const AdvisorView: React.FC = () => {
         
         {/* Header Card */}
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">{getGreeting()}, {advisor.name} 👋</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">{getGreeting()}, {advisor.name} </h1>
           <p className="text-gray-500 text-sm mb-4">
             {format(new Date(session.date + 'T12:00:00'), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
           </p>
