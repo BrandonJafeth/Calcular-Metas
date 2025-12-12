@@ -9,6 +9,9 @@ import { useToast } from '../hooks/useToast';
 import { TrendingUp, Ticket, DollarSign, AlertCircle, CheckCircle2, FileText, FileSpreadsheet } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { exportAdvisorReportPDF, exportAdvisorReportExcel } from '../utils/exportUtils';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { toZonedTime } from 'date-fns-tz';
 
 export const AdvisorView: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -91,6 +94,16 @@ export const AdvisorView: React.FC = () => {
     else exportAdvisorReportExcel(reportData);
   };
 
+  const getGreeting = () => {
+    const timeZone = 'America/Costa_Rica';
+    const zonedDate = toZonedTime(new Date(), timeZone);
+    const hour = zonedDate.getHours();
+    
+    if (hour < 12) return 'Buenos días';
+    if (hour < 18) return 'Buenas tardes';
+    return 'Buenas noches';
+  };
+
   const progress = personalGoal > 0 ? (advisor.total_sales / personalGoal) * 100 : 0;
   const progressStyle = { '--progress-width': `${Math.min(progress, 100)}%` } as React.CSSProperties;
 
@@ -116,8 +129,10 @@ export const AdvisorView: React.FC = () => {
               <FileSpreadsheet className="w-4 h-4" />
             </button>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">Hola, {advisor.name} 👋</h1>
-          <p className="text-gray-500 text-sm">{new Date(session.date).toLocaleDateString('es-CR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">{getGreeting()}, {advisor.name} </h1>
+          <p className="text-gray-500 text-sm">
+            {format(new Date(session.date + 'T12:00:00'), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+          </p>
         </div>
 
         {/* Goal Progress Card */}
