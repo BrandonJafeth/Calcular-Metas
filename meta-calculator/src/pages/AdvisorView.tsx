@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { advisorService } from '../services/advisorService';
@@ -12,6 +12,7 @@ import { exportAdvisorReportPDF, exportAdvisorReportExcel } from '../utils/expor
 import { toZonedTime } from 'date-fns-tz';
 import { CR_TIMEZONE, formatCRDateLong } from '../utils/dateUtils';
 import { SalesCalculator } from '../components/advisor/SalesCalculator';
+import confetti from 'canvas-confetti';
 
 export const AdvisorView: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -37,6 +38,7 @@ export const AdvisorView: React.FC = () => {
   const [salesInput, setSalesInput] = useState('');
   const [ticketsInput, setTicketsInput] = useState('');
   const initializedRef = useRef(false);
+  const celebratedRef = useRef(false);
 
   useEffect(() => {
     if (data?.advisor && !initializedRef.current) {
@@ -59,39 +61,60 @@ export const AdvisorView: React.FC = () => {
     showToast('Monto aplicado al reporte', 'success');
   };
 
+  // Calculate Personal Goal
+  const personalGoal = useMemo(() => {
+    if (!data) return 0;
+    const { session, weights, allAdvisors, allAvailability, advisor } = data;
+    
+    let goal = 0;
+    const startHour = session.start_hour ?? 9;
+    const endHour = session.end_hour ?? 21;
+
+    weights.forEach(w => {
+      if (w.hour_start < startHour || w.hour_start > endHour) return;
+      const hourlyGoal = (session.total_daily_goal * w.percentage) / 100;
+      
+      let activeCount = 0;
+      let isCurrentAdvisorActive = true;
+
+      allAdvisors.forEach(adv => {
+        const avail = allAvailability.find(a => a.advisor_id === adv.id && a.hour_start === w.hour_start);
+        const isActive = avail ? avail.is_active : true;
+        if (isActive) activeCount++;
+        if (adv.id === advisor.id) isCurrentAdvisorActive = isActive;
+      });
+
+      if (activeCount > 0 && isCurrentAdvisorActive) {
+        goal += hourlyGoal / activeCount;
+      }
+    });
+    return goal;
+  }, [data]);
+
+  // Confetti Effect
+  useEffect(() => {
+    if (!data) return;
+    const { advisor } = data;
+
+    if (personalGoal > 0 && advisor.total_sales >= personalGoal) {
+      if (!celebratedRef.current) {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#26ccff', '#a25afd', '#ff5e7e', '#88ff5a', '#fcff42', '#ffa62d', '#ff36ff']
+        });
+        celebratedRef.current = true;
+      }
+    } else {
+      celebratedRef.current = false;
+    }
+  }, [data?.advisor.total_sales, personalGoal, data]);
+
   if (isLoading) return <div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
   if (error || !data) return <div className="flex h-screen items-center justify-center text-red-500 gap-2"><AlertCircle /> Enlace inválido o expirado</div>;
 
-  const { advisor, session, weights, allAdvisors, allAvailability } = data;
-
-  // Calculate Personal Goal
-  // Logic: Distribute hourly goal among active advisors
-  let personalGoal = 0;
-  const startHour = session.start_hour ?? 9;
-  const endHour = session.end_hour ?? 21;
-
-  weights.forEach(w => {
-    // Only consider weights within the configured session hours
-    if (w.hour_start < startHour || w.hour_start > endHour) return;
-
-    const hourlyGoal = (session.total_daily_goal * w.percentage) / 100;
-    
-    // Count active advisors for this hour
-    let activeCount = 0;
-    let isCurrentAdvisorActive = true; // Default to true
-
-    allAdvisors.forEach(adv => {
-      const avail = allAvailability.find(a => a.advisor_id === adv.id && a.hour_start === w.hour_start);
-      const isActive = avail ? avail.is_active : true; // Default active
-      
-      if (isActive) activeCount++;
-      if (adv.id === advisor.id) isCurrentAdvisorActive = isActive;
-    });
-
-    if (activeCount > 0 && isCurrentAdvisorActive) {
-      personalGoal += hourlyGoal / activeCount;
-    }
-  });
+  const { advisor, session } = data;
 
   const handleExport = (type: 'pdf' | 'excel') => {
     const reportData = { advisor, session, personalGoal };
