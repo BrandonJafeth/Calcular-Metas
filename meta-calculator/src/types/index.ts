@@ -37,6 +37,16 @@ export interface SessionTemplate {
   weights: { hour_start: number; percentage: number }[];
 }
 
+export interface StoreHourlyMetric {
+  id: string;
+  session_id: string;
+  hour: number;
+  traffic: number;
+  last_year_sales: number;
+  current_sales: number;
+  tickets: number;
+}
+
 // Legacy types kept for reference if needed, but likely to be replaced
 export interface TimeSlot {
   id: string;

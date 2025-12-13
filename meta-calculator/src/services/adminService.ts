@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { DailySession, HourlyWeight, Advisor, AdvisorAvailability, SessionTemplate } from '../types';
+import type { DailySession, HourlyWeight, Advisor, AdvisorAvailability, SessionTemplate, StoreHourlyMetric } from '../types';
 
 export const adminService = {
   async getOrCreateSession(date: string): Promise<DailySession> {
@@ -31,7 +31,9 @@ export const adminService = {
     // 1. Try to find a session with the SAME day of week (e.g. last Monday)
     // 2. If not found, fallback to the most recent session (e.g. yesterday)
     
-    const targetDate = new Date(date);
+    // Parse date manually to ensure local time consistency and avoid UTC shifts
+    const [ty, tm, td] = date.split('-').map(Number);
+    const targetDate = new Date(ty, tm - 1, td);
     const targetDayOfWeek = targetDate.getDay(); // 0-6
 
     // Fetch last 30 sessions to find a match in JS (simpler than complex SQL date math)
@@ -242,5 +244,23 @@ export const adminService = {
     if (weights.length > 0) {
       await this.upsertHourlyWeights(weights);
     }
+  },
+
+  async getStoreHourlyMetrics(sessionId: string): Promise<StoreHourlyMetric[]> {
+    const { data, error } = await supabase
+      .from('store_hourly_metrics')
+      .select('*')
+      .eq('session_id', sessionId);
+      
+    if (error) throw new Error(`Error fetching store metrics: ${error.message}`);
+    return data || [];
+  },
+
+  async upsertStoreHourlyMetrics(metrics: Partial<StoreHourlyMetric>[]): Promise<void> {
+    const { error } = await supabase
+      .from('store_hourly_metrics')
+      .upsert(metrics, { onConflict: 'session_id,hour' });
+      
+    if (error) throw new Error(`Error updating store metrics: ${error.message}`);
   }
 };

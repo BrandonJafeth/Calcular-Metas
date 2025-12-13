@@ -9,9 +9,8 @@ import { useToast } from '../hooks/useToast';
 import { TrendingUp, Ticket, DollarSign, AlertCircle, CheckCircle2, FileText, FileSpreadsheet } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { exportAdvisorReportPDF, exportAdvisorReportExcel } from '../utils/exportUtils';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { toZonedTime } from 'date-fns-tz';
+import { CR_TIMEZONE, formatCRDateLong } from '../utils/dateUtils';
 
 export const AdvisorView: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -95,8 +94,7 @@ export const AdvisorView: React.FC = () => {
   };
 
   const getGreeting = () => {
-    const timeZone = 'America/Costa_Rica';
-    const zonedDate = toZonedTime(new Date(), timeZone);
+    const zonedDate = toZonedTime(new Date(), CR_TIMEZONE);
     const hour = zonedDate.getHours();
     
     if (hour < 12) return 'Buenos días';
@@ -115,7 +113,7 @@ export const AdvisorView: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-1">{getGreeting()}, {advisor.name} </h1>
           <p className="text-gray-500 text-sm mb-4">
-            {format(new Date(session.date + 'T12:00:00'), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
+            {formatCRDateLong(session.date)}
           </p>
           
           <div className="flex justify-center gap-3">
