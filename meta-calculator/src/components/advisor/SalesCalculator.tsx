@@ -23,7 +23,7 @@ export const SalesCalculator: React.FC<CalculatorProps> = ({ onApplyTotal }) => 
   };
 
   const removeInput = (index: number) => {
-    if (inputs.length <= 1) return;
+    if (inputs.length <= 2) return;
     const newInputs = inputs.filter((_, i) => i !== index);
     setInputs(newInputs);
   };
@@ -48,7 +48,7 @@ export const SalesCalculator: React.FC<CalculatorProps> = ({ onApplyTotal }) => 
               className="flex-1"
               min="0"
             />
-            {inputs.length > 1 && (
+            {inputs.length > 2 && (
               <button 
                 onClick={() => removeInput(index)}
                 className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
