@@ -11,6 +11,7 @@ import { cn } from '../lib/utils';
 import { exportAdvisorReportPDF, exportAdvisorReportExcel } from '../utils/exportUtils';
 import { toZonedTime } from 'date-fns-tz';
 import { CR_TIMEZONE, formatCRDateLong } from '../utils/dateUtils';
+import { SalesCalculator } from '../components/advisor/SalesCalculator';
 
 export const AdvisorView: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -51,6 +52,11 @@ export const AdvisorView: React.FC = () => {
     const sales = parseFloat(salesInput) || 0;
     const tickets = parseInt(ticketsInput) || 0;
     updateSalesMutation.mutate({ sales, tickets });
+  };
+
+  const handleApplyCalculatorTotal = (total: number) => {
+    setSalesInput(total.toString());
+    showToast('Monto aplicado al reporte', 'success');
   };
 
   if (isLoading) return <div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
@@ -230,9 +236,14 @@ export const AdvisorView: React.FC = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm text-center">
-            <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Faltante</p>
-            <p className={cn("text-lg font-bold mt-1", personalGoal - advisor.total_sales > 0 ? "text-orange-500" : "text-green-500")}>
-              {formatCurrency(Math.max(0, personalGoal - advisor.total_sales))}
+            <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">
+              {advisor.total_sales >= personalGoal ? 'Superávit' : 'Faltante'}
+            </p>
+            <p className={cn("text-lg font-bold mt-1", advisor.total_sales >= personalGoal ? "text-green-600" : "text-orange-500")}>
+              {advisor.total_sales >= personalGoal 
+                ? `+${formatCurrency(advisor.total_sales - personalGoal)}`
+                : formatCurrency(Math.max(0, personalGoal - advisor.total_sales))
+              }
             </p>
           </div>
           <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm text-center">
@@ -242,6 +253,9 @@ export const AdvisorView: React.FC = () => {
             </p>
           </div>
         </div>
+
+        {/* Calculator */}
+        <SalesCalculator onApplyTotal={handleApplyCalculatorTotal} />
 
       </div>
     </div>
