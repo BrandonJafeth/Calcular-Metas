@@ -119,7 +119,16 @@ export const useStoreMetrics = (date: string) => {
   };
 
   // Calculations using mergedMetrics
-  const totalStoreSales = Object.values(mergedMetrics).reduce((sum, m) => sum + (m.current_sales || 0), 0);
+  // Requirement: Total Store Sales should be the value of the last hour entered (cumulative), not the sum.
+  const totalStoreSales = useMemo(() => {
+    const sortedHours = Object.keys(mergedMetrics).map(Number).sort((a, b) => b - a);
+    for (const h of sortedHours) {
+      const val = mergedMetrics[h]?.current_sales;
+      if (val && val > 0) return val;
+    }
+    return 0;
+  }, [mergedMetrics]);
+
   const totalAdvisorSales = advisors?.reduce((sum, a) => sum + (a.total_sales || 0), 0) || 0;
   const salesDifference = totalStoreSales - totalAdvisorSales;
   const totalLastYearSales = Object.values(mergedMetrics).reduce((sum, m) => sum + (m.last_year_sales || 0), 0);

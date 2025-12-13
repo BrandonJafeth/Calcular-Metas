@@ -42,7 +42,14 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
             const lastYear = m.last_year_sales || 0;
             const current = m.current_sales || 0;
             
-            const storeHourlyGoal = getStoreHourlyGoal(hour);
+            // Calculate cumulative goal up to this hour
+            let cumulativeGoal = 0;
+            for (const h of hours) {
+              if (h <= hour) {
+                cumulativeGoal += getStoreHourlyGoal(h);
+              }
+            }
+            
             const conversion = traffic > 0 ? (tickets / traffic) * 100 : 0;
             const growth = lastYear > 0 ? ((current / lastYear) - 1) * 100 : 0;
             const avgTicket = tickets > 0 ? current / tickets : 0;
@@ -53,7 +60,7 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                   {hour > 12 ? `${hour - 12} PM` : `${hour} ${hour === 12 ? 'PM' : 'AM'}`}
                 </td>
                 <td className="p-3 text-right font-medium text-blue-600">
-                  {formatCurrency(storeHourlyGoal)}
+                  {formatCurrency(cumulativeGoal)}
                 </td>
                 <td className="p-2">
                   <Input 
