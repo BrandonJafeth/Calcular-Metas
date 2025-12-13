@@ -32,23 +32,23 @@ export const StoreMetrics: React.FC<StoreMetricsProps> = ({ date }) => {
       <MetricsSummaryCards totals={totals} />
 
       <div className="bg-white rounded-xl shadow-sm p-4 md:p-6 border border-gray-100">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Métricas de Tienda</h2>
             <p className="text-sm text-gray-500">Seguimiento horario de indicadores clave</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExportPDF} title="Exportar PDF">
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <Button variant="outline" onClick={handleExportPDF} title="Exportar PDF" className="flex-1 md:flex-none">
               <FileDown className="w-4 h-4 mr-2" />
               PDF
             </Button>
-            <Button variant="outline" onClick={handleExportExcel} title="Exportar Excel">
+            <Button variant="outline" onClick={handleExportExcel} title="Exportar Excel" className="flex-1 md:flex-none">
               <FileSpreadsheet className="w-4 h-4 mr-2" />
               Excel
             </Button>
-            <Button onClick={saveMetrics} disabled={isSaving}>
+            <Button onClick={saveMetrics} disabled={isSaving} className="flex-1 md:flex-none whitespace-nowrap">
               <Save className="w-4 h-4 mr-2" />
-              {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+              {isSaving ? 'Guardando...' : 'Guardar'}
             </Button>
           </div>
         </div>
