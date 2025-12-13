@@ -388,7 +388,8 @@ export const AdvisorManagement: React.FC<AdvisorManagementProps> = ({ date }) =>
               <Button 
                 size="sm" 
                 onClick={saveWeights} 
-                disabled={updateWeightsMutation.isPending}
+                disabled={updateWeightsMutation.isPending || Math.abs(Object.values(localWeights).reduce((a, b) => a + b, 0) - 100) > 0.1}
+                title={Math.abs(Object.values(localWeights).reduce((a, b) => a + b, 0) - 100) > 0.1 ? "La suma de los pesos debe ser 100%" : "Guardar distribución"}
                 className="flex-1 sm:flex-none"
               >
                 {updateWeightsMutation.isPending ? 'Guardando...' : 'Guardar Pesos'}
@@ -481,21 +482,31 @@ export const AdvisorManagement: React.FC<AdvisorManagementProps> = ({ date }) =>
             Asesores
           </h2>
 
-          <div className="flex flex-col sm:flex-row gap-2 mb-6">
-            <Input 
-              placeholder="Nombre del nuevo asesor..." 
-              value={newAdvisorName}
-              onChange={(e) => setNewAdvisorName(e.target.value)}
-              className="w-full sm:max-w-md"
-            />
-            <Button 
-              onClick={() => addAdvisorMutation.mutate(newAdvisorName)} 
-              disabled={!newAdvisorName.trim()}
-              className="w-full sm:w-auto"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Agregar
-            </Button>
+          <div className="flex flex-col gap-1 mb-6">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input 
+                placeholder="Nombre del nuevo asesor..." 
+                value={newAdvisorName}
+                onChange={(e) => setNewAdvisorName(e.target.value)}
+                className={cn("w-full sm:max-w-md", 
+                  advisors?.some(a => a.name.toLowerCase() === newAdvisorName.trim().toLowerCase()) && "border-red-300 focus:ring-red-200"
+                )}
+              />
+              <Button 
+                onClick={() => addAdvisorMutation.mutate(newAdvisorName)} 
+                disabled={!newAdvisorName.trim() || advisors?.some(a => a.name.toLowerCase() === newAdvisorName.trim().toLowerCase())}
+                title={advisors?.some(a => a.name.toLowerCase() === newAdvisorName.trim().toLowerCase()) ? "Este nombre ya existe" : "Agregar asesor"}
+                className="w-full sm:w-auto"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Agregar
+              </Button>
+            </div>
+            {advisors?.some(a => a.name.toLowerCase() === newAdvisorName.trim().toLowerCase()) && (
+              <span className="text-xs text-red-500 font-medium ml-1">
+                Este nombre ya está registrado en la sesión actual.
+              </span>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
