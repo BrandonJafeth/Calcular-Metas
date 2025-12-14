@@ -95,7 +95,10 @@ export const AdvisorManagement: React.FC<AdvisorManagementProps> = ({ date }) =>
   const updateHoursMutation = useMutation({
     mutationFn: (vars: { start: number, end: number }) => 
       adminService.updateSessionHours(session!.id, vars.start, vars.end),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['session', date] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['session', date] });
+      queryClient.invalidateQueries({ queryKey: ['weights', session?.id] });
+    }
   });
 
   const updateWeightsMutation = useMutation({

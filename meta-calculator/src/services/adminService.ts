@@ -108,6 +108,15 @@ export const adminService = {
       .eq('id', id);
       
     if (error) throw new Error(`Error updating hours: ${error.message}`);
+
+    // Cleanup weights outside the new range
+    const { error: deleteError } = await supabase
+      .from('hourly_weights')
+      .delete()
+      .eq('session_id', id)
+      .or(`hour_start.lt.${startHour},hour_start.gt.${endHour}`);
+
+    if (deleteError) throw new Error(`Error cleaning up weights: ${deleteError.message}`);
   },
 
   async getHourlyWeights(sessionId: string): Promise<HourlyWeight[]> {
