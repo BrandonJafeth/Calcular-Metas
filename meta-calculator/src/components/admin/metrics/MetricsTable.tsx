@@ -98,7 +98,7 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                 <td className="p-2 border-b border-gray-50">
                   <Input 
                     type="number" 
-                    value={m.last_year_sales || ''} 
+                    value={m.last_year_sales ?? ''} 
                     onChange={e => onMetricChange(hour, 'last_year_sales', e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === '-' || e.key === 'e' || e.key === 'E') {
@@ -113,7 +113,7 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                 <td className="p-2 border-b border-gray-50">
                   <Input 
                     type="number" 
-                    value={m.current_sales || ''} 
+                    value={m.current_sales ?? ''} 
                     onChange={e => onMetricChange(hour, 'current_sales', e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === '-' || e.key === 'e' || e.key === 'E') {
