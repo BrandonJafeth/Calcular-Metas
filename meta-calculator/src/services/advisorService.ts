@@ -71,7 +71,11 @@ export const advisorService = {
   async updateSales(advisorId: string, totalSales: number, tickets: number): Promise<void> {
     const { error } = await supabase
       .from('advisors')
-      .update({ total_sales: totalSales, tickets_count: tickets })
+      .update({ 
+        total_sales: totalSales, 
+        tickets_count: tickets,
+        last_sales_update: new Date().toISOString()
+      })
       .eq('id', advisorId);
       
     if (error) throw new Error(`Error updating sales: ${error.message}`);

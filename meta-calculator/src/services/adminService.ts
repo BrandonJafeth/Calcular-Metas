@@ -262,5 +262,18 @@ export const adminService = {
       .upsert(metrics, { onConflict: 'session_id,hour' });
       
     if (error) throw new Error(`Error updating store metrics: ${error.message}`);
+  },
+
+  async updateAdvisorSales(advisorId: string, sales: number, tickets: number): Promise<void> {
+    const { error } = await supabase
+      .from('advisors')
+      .update({ 
+        total_sales: sales, 
+        tickets_count: tickets,
+        last_sales_update: new Date().toISOString()
+      })
+      .eq('id', advisorId);
+
+    if (error) throw error;
   }
 };

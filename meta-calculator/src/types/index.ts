@@ -20,6 +20,7 @@ export interface Advisor {
   access_token: string;
   total_sales: number;
   tickets_count: number;
+  last_sales_update?: string;
 }
 
 export interface AdvisorAvailability {

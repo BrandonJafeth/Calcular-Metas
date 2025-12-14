@@ -56,9 +56,14 @@ export const AdvisorView: React.FC = () => {
     updateSalesMutation.mutate({ sales, tickets });
   };
 
-  const handleApplyCalculatorTotal = (total: number) => {
-    setSalesInput(total.toString());
-    showToast('Monto aplicado al reporte', 'success');
+  const handleApplyCalculatorTotal = (total: number, type: 'sales' | 'tickets') => {
+    if (type === 'sales') {
+      setSalesInput(total.toString());
+      showToast('Monto de ventas aplicado', 'success');
+    } else {
+      setTicketsInput(total.toString());
+      showToast('Cantidad de tickets aplicada', 'success');
+    }
   };
 
   // Calculate Personal Goal

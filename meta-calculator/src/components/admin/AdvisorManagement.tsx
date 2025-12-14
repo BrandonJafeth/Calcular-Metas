@@ -4,7 +4,8 @@ import { adminService } from '../../services/adminService';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { formatCurrency } from '../../utils/currency';
-import { Plus, Trash2, Copy, User, Calendar, DollarSign, Clock, X, Eye, FileText, FileSpreadsheet, Save, LayoutTemplate } from 'lucide-react';
+import { formatCRTime, formatCRDateLong } from '../../utils/dateUtils';
+import { Plus, Trash2, Copy, User, Calendar, DollarSign, Clock, X, Eye, FileText, FileSpreadsheet, Save, LayoutTemplate, Edit } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import { cn } from '../../lib/utils';
 import { exportAdminReportPDF, exportAdminReportExcel } from '../../utils/exportUtils';
@@ -16,6 +17,7 @@ interface AdvisorManagementProps {
 
 export const AdvisorManagement: React.FC<AdvisorManagementProps> = ({ date }) => {
   const [selectedAdvisor, setSelectedAdvisor] = useState<Advisor | null>(null);
+  const [editingAdvisor, setEditingAdvisor] = useState<Advisor | null>(null);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -121,6 +123,16 @@ export const AdvisorManagement: React.FC<AdvisorManagementProps> = ({ date }) =>
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['advisors', session?.id] })
   });
 
+  const updateAdvisorSalesMutation = useMutation({
+    mutationFn: (vars: { id: string, sales: number, tickets: number }) => 
+      adminService.updateAdvisorSales(vars.id, vars.sales, vars.tickets),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['advisors', session?.id] });
+      showToast('Ventas actualizadas', 'success');
+      setEditingAdvisor(null);
+    }
+  });
+
   // Local State
   const [newAdvisorName, setNewAdvisorName] = useState('');
   const [localWeights, setLocalWeights] = useState<Record<number, number>>({});
@@ -185,8 +197,9 @@ export const AdvisorManagement: React.FC<AdvisorManagementProps> = ({ date }) =>
 
   const copyLink = (token: string) => {
     const url = `${window.location.origin}/advisor/${token}`;
-    navigator.clipboard.writeText(url);
-    showToast('Link copiado al portapapeles', 'success');
+    const message = `Hola! Aquí tienes tu enlace para el reporte de ventas del día ${formatCRDateLong(date)}.\n\n¡Mucha suerte en tus ventas! \n\n${url}`;
+    navigator.clipboard.writeText(message);
+    showToast('Link copiado con mensaje', 'success');
   };
 
   const calculateAdvisorGoal = (advisorId: string) => {
@@ -518,10 +531,20 @@ export const AdvisorManagement: React.FC<AdvisorManagementProps> = ({ date }) =>
                 onDelete={() => deleteAdvisorMutation.mutate(advisor.id)}
                 onCopyLink={() => copyLink(advisor.access_token)}
                 onViewDetails={() => setSelectedAdvisor(advisor)}
+                onEdit={() => setEditingAdvisor(advisor)}
               />
             ))}
           </div>
         </div>
+
+        {/* Edit Sales Modal */}
+        {editingAdvisor && (
+          <EditAdvisorSalesModal
+            advisor={editingAdvisor}
+            onClose={() => setEditingAdvisor(null)}
+            onSave={(sales, tickets) => updateAdvisorSalesMutation.mutate({ id: editingAdvisor.id, sales, tickets })}
+          />
+        )}
 
         {/* Details Modal */}
         {selectedAdvisor && session && weights && advisors && (
@@ -636,13 +659,17 @@ const AdvisorCard: React.FC<{
   calculatedGoal: number, 
   onDelete: () => void, 
   onCopyLink: () => void,
-  onViewDetails: () => void 
-}> = ({ advisor, calculatedGoal, onDelete, onCopyLink, onViewDetails }) => {
+  onViewDetails: () => void,
+  onEdit: () => void
+}> = ({ advisor, calculatedGoal, onDelete, onCopyLink, onViewDetails, onEdit }) => {
   return (
     <div className="border rounded-lg p-4 hover:shadow-md transition-shadow bg-white group relative">
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-bold text-lg text-gray-800">{advisor.name}</h3>
         <div className="flex gap-1">
+          <button onClick={onEdit} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Editar Ventas">
+            <Edit className="w-4 h-4" />
+          </button>
           <button onClick={onViewDetails} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="Ver Detalles">
             <Eye className="w-4 h-4" />
           </button>
@@ -668,11 +695,78 @@ const AdvisorCard: React.FC<{
           <span className="text-gray-500">Tickets:</span>
           <span className="font-medium">{advisor.tickets_count}</span>
         </div>
+        {advisor.last_sales_update && (
+          <div className="flex justify-between text-xs text-gray-400 pt-1">
+            <span>Actualizado:</span>
+            <span>{formatCRTime(advisor.last_sales_update)}</span>
+          </div>
+        )}
         <div className="flex justify-between text-sm pt-2 border-t">
           <span className="text-gray-500">% Cumplimiento:</span>
           <span className={cn("font-bold", (advisor.total_sales / calculatedGoal) >= 1 ? "text-green-600" : "text-orange-500")}>
             {calculatedGoal > 0 ? ((advisor.total_sales / calculatedGoal) * 100).toFixed(1) : 0}%
           </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EditAdvisorSalesModal: React.FC<{
+  advisor: Advisor;
+  onClose: () => void;
+  onSave: (sales: number, tickets: number) => void;
+}> = ({ advisor, onClose, onSave }) => {
+  const [sales, setSales] = useState(advisor.total_sales.toString());
+  const [tickets, setTickets] = useState(advisor.tickets_count.toString());
+
+  const handleSave = () => {
+    const s = parseFloat(sales) || 0;
+    const t = parseInt(tickets) || 0;
+    onSave(s, t);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col">
+        <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+          <h2 className="text-lg font-bold text-gray-900">Editar Ventas: {advisor.name}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors" title="Cerrar">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Ventas Totales</label>
+            <div className="relative">
+              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input 
+                type="number" 
+                value={sales}
+                onChange={(e) => setSales(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Cantidad de Tickets</label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input 
+                type="number" 
+                value={tickets}
+                onChange={(e) => setTickets(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+
+          <div className="pt-4 flex gap-2">
+            <Button variant="outline" onClick={onClose} className="flex-1">Cancelar</Button>
+            <Button onClick={handleSave} className="flex-1">Guardar</Button>
+          </div>
         </div>
       </div>
     </div>

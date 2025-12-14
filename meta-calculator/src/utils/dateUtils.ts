@@ -25,3 +25,9 @@ export const formatCRDateLong = (dateStr: string): string => {
   const date = new Date(year, month - 1, day);
   return format(date, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es });
 };
+
+export const formatCRTime = (isoString: string): string => {
+  const date = new Date(isoString);
+  const zonedDate = toZonedTime(date, CR_TIMEZONE);
+  return format(zonedDate, "d MMM, h:mm a", { timeZone: CR_TIMEZONE, locale: es });
+};
