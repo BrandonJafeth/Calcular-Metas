@@ -1,6 +1,7 @@
 import React from 'react';
 import { Input } from '../../ui/Input';
 import { formatCurrency } from '../../../utils/currency';
+import { Info } from 'lucide-react';
 import type { StoreHourlyMetric } from '../../../types';
 
 interface MetricsTableProps {
@@ -51,7 +52,14 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
             }
             
             const conversion = traffic > 0 ? (tickets / traffic) * 100 : 0;
-            const growth = lastYear > 0 ? ((current / lastYear) - 1) * 100 : 0;
+            
+            let growth = 0;
+            if (lastYear > 0) {
+              growth = ((current / lastYear) - 1) * 100;
+            } else if (current > 0) {
+              growth = 100;
+            }
+
             const avgTicket = tickets > 0 ? current / tickets : 0;
 
             return (
@@ -126,7 +134,18 @@ export const MetricsTable: React.FC<MetricsTableProps> = ({
                   />
                 </td>
                 <td className={`p-3 text-right font-bold border-b border-gray-50 ${growth > 0 ? 'text-green-600' : growth < 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                  {growth > 0 ? '+' : ''}{growth.toFixed(1)}%
+                  <div className="flex items-center justify-end gap-1">
+                    {growth > 0 ? '+' : ''}{growth.toFixed(1)}%
+                    {m.last_year_sales === 0 && (m.current_sales ?? 0) > 0 && (
+                      <div className="group relative">
+                        <Info className="w-4 h-4 text-blue-500 cursor-help" />
+                        <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                          Crecimiento asignado al 100% por falta de histórico (Venta año anterior = 0)
+                          <div className="absolute top-full right-2 -mt-1 border-4 border-transparent border-t-gray-800"></div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td className="p-3 text-right font-medium text-gray-600 border-b border-gray-50">
                   {formatCurrency(avgTicket)}

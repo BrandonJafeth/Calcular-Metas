@@ -129,10 +129,24 @@ export const useStoreMetrics = (date: string) => {
     return 0;
   }, [mergedMetrics]);
 
+  const totalLastYearSales = useMemo(() => {
+    const sortedHours = Object.keys(mergedMetrics).map(Number).sort((a, b) => b - a);
+    for (const h of sortedHours) {
+      const val = mergedMetrics[h]?.last_year_sales;
+      if (val && val > 0) return val;
+    }
+    return 0;
+  }, [mergedMetrics]);
+
   const totalAdvisorSales = advisors?.reduce((sum, a) => sum + (a.total_sales || 0), 0) || 0;
   const salesDifference = totalStoreSales - totalAdvisorSales;
-  const totalLastYearSales = Object.values(mergedMetrics).reduce((sum, m) => sum + (m.last_year_sales || 0), 0);
-  const totalGrowth = totalLastYearSales > 0 ? ((totalStoreSales / totalLastYearSales) - 1) * 100 : 0;
+  
+  const totalGrowth = useMemo(() => {
+    if (totalLastYearSales > 0) {
+      return ((totalStoreSales / totalLastYearSales) - 1) * 100;
+    }
+    return totalStoreSales > 0 ? 100 : 0;
+  }, [totalStoreSales, totalLastYearSales]);
 
   const startHour = session?.start_hour ?? 9;
   const endHour = session?.end_hour ?? 21;

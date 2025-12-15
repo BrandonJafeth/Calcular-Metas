@@ -244,7 +244,14 @@ export const exportStoreMetricsPDF = (data: StoreMetricsReportData) => {
     const current = m.current_sales || 0;
     
     const conversion = traffic > 0 ? (tickets / traffic) * 100 : 0;
-    const growth = lastYear > 0 ? ((current / lastYear) - 1) * 100 : 0;
+    
+    let growth = 0;
+    if (lastYear > 0) {
+      growth = ((current / lastYear) - 1) * 100;
+    } else if (current > 0) {
+      growth = 100;
+    }
+
     const avgTicket = tickets > 0 ? current / tickets : 0;
 
     return [
@@ -264,11 +271,29 @@ export const exportStoreMetricsPDF = (data: StoreMetricsReportData) => {
   const totalGoal = session.total_daily_goal;
   const totalTraffic = metrics.reduce((sum, m) => sum + (m.traffic || 0), 0);
   const totalTickets = metrics.reduce((sum, m) => sum + (m.tickets || 0), 0);
-  const totalLastYear = metrics.reduce((sum, m) => sum + (m.last_year_sales || 0), 0);
-  const totalCurrent = metrics.reduce((sum, m) => sum + (m.current_sales || 0), 0);
+  
+  // Use last entered value for cumulative fields
+  const getLastValue = (field: 'current_sales' | 'last_year_sales') => {
+    const sortedMetrics = [...metrics].sort((a, b) => b.hour - a.hour);
+    for (const m of sortedMetrics) {
+      const val = m[field];
+      if (val && val > 0) return val;
+    }
+    return 0;
+  };
+
+  const totalLastYear = getLastValue('last_year_sales');
+  const totalCurrent = getLastValue('current_sales');
   
   const totalConversion = totalTraffic > 0 ? (totalTickets / totalTraffic) * 100 : 0;
-  const totalGrowth = totalLastYear > 0 ? ((totalCurrent / totalLastYear) - 1) * 100 : 0;
+  
+  let totalGrowth = 0;
+  if (totalLastYear > 0) {
+    totalGrowth = ((totalCurrent / totalLastYear) - 1) * 100;
+  } else if (totalCurrent > 0) {
+    totalGrowth = 100;
+  }
+
   const totalAvgTicket = totalTickets > 0 ? totalCurrent / totalTickets : 0;
 
   tableData.push([
@@ -327,7 +352,14 @@ export const exportStoreMetricsExcel = (data: StoreMetricsReportData) => {
     const current = m.current_sales || 0;
     
     const conversion = traffic > 0 ? (tickets / traffic) : 0;
-    const growth = lastYear > 0 ? ((current / lastYear) - 1) : 0;
+    
+    let growth = 0;
+    if (lastYear > 0) {
+      growth = ((current / lastYear) - 1);
+    } else if (current > 0) {
+      growth = 1; // 100%
+    }
+
     const avgTicket = tickets > 0 ? current / tickets : 0;
 
     return {
@@ -347,11 +379,29 @@ export const exportStoreMetricsExcel = (data: StoreMetricsReportData) => {
   const totalGoal = session.total_daily_goal;
   const totalTraffic = metrics.reduce((sum, m) => sum + (m.traffic || 0), 0);
   const totalTickets = metrics.reduce((sum, m) => sum + (m.tickets || 0), 0);
-  const totalLastYear = metrics.reduce((sum, m) => sum + (m.last_year_sales || 0), 0);
-  const totalCurrent = metrics.reduce((sum, m) => sum + (m.current_sales || 0), 0);
+  
+  // Use last entered value for cumulative fields
+  const getLastValue = (field: 'current_sales' | 'last_year_sales') => {
+    const sortedMetrics = [...metrics].sort((a, b) => b.hour - a.hour);
+    for (const m of sortedMetrics) {
+      const val = m[field];
+      if (val && val > 0) return val;
+    }
+    return 0;
+  };
+
+  const totalLastYear = getLastValue('last_year_sales');
+  const totalCurrent = getLastValue('current_sales');
   
   const totalConversion = totalTraffic > 0 ? (totalTickets / totalTraffic) : 0;
-  const totalGrowth = totalLastYear > 0 ? ((totalCurrent / totalLastYear) - 1) : 0;
+  
+  let totalGrowth = 0;
+  if (totalLastYear > 0) {
+    totalGrowth = ((totalCurrent / totalLastYear) - 1);
+  } else if (totalCurrent > 0) {
+    totalGrowth = 1; // 100%
+  }
+
   const totalAvgTicket = totalTickets > 0 ? totalCurrent / totalTickets : 0;
 
   rows.push({
