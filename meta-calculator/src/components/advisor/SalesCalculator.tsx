@@ -104,7 +104,11 @@ export const SalesCalculator: React.FC<CalculatorProps> = ({ onApplyTotal }) => 
         </div>
         
         <Button 
-          onClick={() => onApplyTotal(total, mode)}
+          onClick={() => {
+            onApplyTotal(total, mode);
+            setMode(mode === 'sales' ? 'tickets' : 'sales');
+            setInputs(['', '']);
+          }}
           className="w-full bg-purple-600 hover:bg-purple-700 text-white"
           disabled={total <= 0}
         >
