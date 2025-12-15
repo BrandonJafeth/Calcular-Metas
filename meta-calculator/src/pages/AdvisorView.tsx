@@ -10,7 +10,7 @@ import { TrendingUp, Ticket, DollarSign, AlertCircle, CheckCircle2, FileText, Fi
 import { cn } from '../lib/utils';
 import { exportAdvisorReportPDF, exportAdvisorReportExcel } from '../utils/exportUtils';
 import { toZonedTime } from 'date-fns-tz';
-import { CR_TIMEZONE, formatCRDateLong } from '../utils/dateUtils';
+import { CR_TIMEZONE, formatCRDateLong, formatCRTime } from '../utils/dateUtils';
 import { SalesCalculator } from '../components/advisor/SalesCalculator';
 import confetti from 'canvas-confetti';
 
@@ -148,6 +148,11 @@ export const AdvisorView: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900 mb-1">{getGreeting()}, {advisor.name} </h1>
           <p className="text-gray-500 text-sm mb-4">
             {formatCRDateLong(session.date)}
+            {advisor.last_sales_update && (
+              <span className="block text-xs text-gray-400 mt-1">
+                Actualizado: {formatCRTime(advisor.last_sales_update)}
+              </span>
+            )}
           </p>
           
           <div className="flex justify-center gap-3">
